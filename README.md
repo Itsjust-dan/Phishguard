@@ -30,9 +30,9 @@ PhishGuard/
 ## Setup
 
 ### 1. Start the backend
-
+Tested with Python 3.13.
 ```bash
-git clone https://github.com/<your-username>/phishguard.git
+git clone https://github.com/<Itsjust-dan>/phishguard.git
 cd phishguard
 
 python -m venv .venv
