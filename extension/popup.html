@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PhishGuard</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <span class="logo-shield">🛡️</span>
+    <h1 class="title">PhishGuard</h1>
+  </header>
+
+  <!-- Current URL -->
+  <section class="url-section">
+    <p class="label">Current Page</p>
+    <p id="current-url" class="url-text">Loading…</p>
+  </section>
+
+  <!-- Result card -->
+  <section id="result-card" class="result-card hidden">
+
+    <div id="status-icon" class="status-icon">
+      <span id="icon-emoji">🔍</span>
+    </div>
+
+    <p id="status-title" class="status-title">Analysing…</p>
+    <p id="status-message" class="status-message"></p>
+
+    <div class="confidence-row">
+      <span class="confidence-label">Confidence</span>
+      <span id="confidence-value" class="confidence-value">—</span>
+    </div>
+
+    <div class="risk-bar-wrap">
+      <div id="risk-bar" class="risk-bar"></div>
+    </div>
+
+  </section>
+
+  <!-- Loading spinner -->
+  <section id="loading" class="loading">
+    <div class="spinner"></div>
+    <p>Checking URL…</p>
+  </section>
+
+  <!-- Error state -->
+  <section id="error-section" class="error-section hidden">
+    <p id="error-message">⚠️ Could not reach the detection API.</p>
+    <p class="error-hint">Make sure the Flask server is running on port 5000.</p>
+  </section>
+
+  <!-- Details breakdown -->
+  <section id="details-section" class="hidden"></section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <button id="scan-btn" class="scan-btn">🔄 Re-scan</button>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>

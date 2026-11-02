@@ -1,0 +1,18 @@
+# Secrets
+.env
+
+# Virtual environments
+.venv/
+.venv-1/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Large data (people can fetch it with download_datasets.py)
+dataset.csv
+
+# Editor settings
+.vscode/
+
+phishing_model_backup.pkl
