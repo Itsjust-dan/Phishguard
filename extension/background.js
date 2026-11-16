@@ -4,7 +4,7 @@
  * Connects to the local Flask API and updates the extension badge.
  */
 
-const API_ENDPOINT = "http://127.0.0.1:5000/predict";
+const API_ENDPOINT = "https://phishguard-api-a1xe.onrender.com/predict";
 const cache = new Map();
 const CACHE_TTL_MS = 10 * 60 * 1000;
 

@@ -4,8 +4,7 @@
  * Matches the response schema returned by app.py.
  */
 
-const API_ENDPOINT = "http://127.0.0.1:5000/predict";
-
+const API_ENDPOINT = "https://phishguard-api-a1xe.onrender.com/predict";
 const elUrl = document.getElementById("current-url");
 const elResultCard = document.getElementById("result-card");
 const elLoading = document.getElementById("loading");
@@ -264,7 +263,7 @@ console.log("[PhishGuard] API endpoint:", API_ENDPOINT);
         "Content-Type": "application/json"
       },
       body: JSON.stringify({ url: tabUrl }),
-      signal: AbortSignal.timeout(15000)
+     signal: AbortSignal.timeout(30000)
     });
 
     const data = await response.json().catch(() => ({}));
@@ -289,7 +288,7 @@ console.log("[PhishGuard] API response:", data);
     console.error("[PhishGuard] Detection request failed:", error);
 
     renderError(
-      "Cannot connect to the detection API. Check that Flask is running at 127.0.0.1:5000, then reload the extension."
+      "Cannot reach the PhishGuard server. Check your internet connection and try again."
     );
   }
 }

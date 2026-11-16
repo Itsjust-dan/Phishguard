@@ -1,25 +1,24 @@
 {
   "manifest_version": 3,
-  "name": "PhishGuard – Phishing Detector",
+  "name": "PhishGuard - Phishing Detector",
   "version": "1.0.0",
-  "description": "Detects phishing websites using a local ML model via a Flask API.",
+  "description": "Checks websites for phishing using machine learning, heuristics and VirusTotal, and warns you before you enter details.",
 
   "permissions": [
     "tabs",
     "activeTab",
-    "scripting",
-    "storage"
+    "scripting"
   ],
 
   "host_permissions": [
-    "http://127.0.0.1:5000/*"
+    "https://phishguard-api-a1xe.onrender.com/*"
   ],
 
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
-      "16":  "icons/icon16.png",
-      "48":  "icons/icon48.png",
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     }
   },
@@ -29,8 +28,8 @@
   },
 
   "icons": {
-    "16":  "icons/icon16.png",
-    "48":  "icons/icon48.png",
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   }
 }
