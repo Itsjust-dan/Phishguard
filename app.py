@@ -4,6 +4,8 @@ Hybrid phishing detection: calibrated Random Forest (URL-only or URL+page),
 heuristic rules, and an optional VirusTotal lookup.
 """
 import os, time, base64, threading, logging
+import warnings
+warnings.filterwarnings("ignore", message="X does not have valid feature names")
 from urllib.parse import urlparse
 
 import joblib, numpy as np, requests
