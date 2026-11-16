@@ -1,39 +1,44 @@
-
 /**
  * PhishGuard background service worker
- * Connects to the local Flask API and updates the extension badge.
+ * Checks each page you visit with the PhishGuard API and updates the badge.
+ * Pages flagged as phishing are replaced with a warning page.
  */
 
 const API_ENDPOINT = "https://phishguard-api-a1xe.onrender.com/predict";
 const cache = new Map();
+const allowed = new Set();
 const CACHE_TTL_MS = 10 * 60 * 1000;
+
+// Remove the #fragment so tokens in it are never sent to the server
+function cleanUrl(url) {
+  try {
+    const u = new URL(url);
+    u.hash = "";
+    return u.href;
+  } catch {
+    return url;
+  }
+}
 
 async function checkUrl(url) {
   const now = Date.now();
   const cached = cache.get(url);
-
-  if (cached && now - cached.ts < CACHE_TTL_MS) {
-    return cached;
-  }
+  if (cached && now - cached.ts < CACHE_TTL_MS) return cached;
 
   try {
     const response = await fetch(API_ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url }),
+      signal: AbortSignal.timeout(30000),
     });
 
     if (!response.ok) {
-      console.error(
-        "[PhishGuard] API returned HTTP",
-        response.status,
-        await response.text()
-      );
+      console.error("[PhishGuard] API returned HTTP", response.status);
       return null;
     }
 
     const data = await response.json();
-
     if (!data.prediction || !data.action) {
       console.error("[PhishGuard] Unexpected API response:", data);
       return null;
@@ -42,134 +47,61 @@ async function checkUrl(url) {
     const entry = {
       prediction: data.prediction,
       action: data.action,
-
-      // app.py returns risk_score, not confidence.
       riskScore: Number(data.risk_score ?? data.confidence ?? 0),
-
-      flags: Array.isArray(data.heuristic_flags)
-        ? data.heuristic_flags
-        : [],
-
+      flags: Array.isArray(data.heuristic_flags) ? data.heuristic_flags : [],
       ts: now,
     };
-
     cache.set(url, entry);
     return entry;
-
   } catch (error) {
     console.error("[PhishGuard] Cannot connect to API:", error);
     return null;
   }
 }
 
-async function injectWarning(tabId, flags) {
-  const details = flags.length
-    ? flags.join(" • ")
-    : "One or more detection signals raised an alert.";
-
-  try {
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      func: (detailText) => {
-        if (!document.body ||
-            document.getElementById("phishguard-overlay")) {
-          return;
-        }
-
-        const overlay = document.createElement("div");
-        overlay.id = "phishguard-overlay";
-        overlay.style.cssText = [
-          "position:fixed",
-          "inset:0",
-          "width:100%",
-          "height:100%",
-          "background:rgba(150,0,0,0.97)",
-          "z-index:2147483647",
-          "display:flex",
-          "flex-direction:column",
-          "align-items:center",
-          "justify-content:center",
-          "font-family:Arial,sans-serif",
-          "color:white",
-          "padding:24px",
-          "box-sizing:border-box",
-          "text-align:center"
-        ].join(";");
-
-        const heading = document.createElement("h1");
-        heading.textContent = "PHISHGUARD WARNING";
-        heading.style.cssText = "font-size:2rem;margin-bottom:12px";
-
-        const message = document.createElement("p");
-        message.textContent =
-          "This website has been flagged as potentially dangerous.";
-        message.style.cssText =
-          "max-width:560px;line-height:1.6";
-
-        const details = document.createElement("p");
-        // Use textContent so returned text cannot inject HTML.
-        details.textContent = detailText;
-        details.style.cssText =
-          "max-width:560px;padding:12px;background:#500;border-radius:8px";
-
-        const backButton = document.createElement("button");
-        backButton.textContent = "Go Back";
-        backButton.style.cssText =
-          "padding:12px 20px;margin-top:16px;cursor:pointer";
-        backButton.addEventListener("click", () => history.back());
-
-        overlay.append(heading, message, details, backButton);
-        document.body.appendChild(overlay);
-      },
-      args: [details],
-    });
-  } catch (error) {
-    console.warn(
-      "[PhishGuard] Could not display warning on this tab:",
-      error
-    );
+// The warning page asks us to let one URL through after "Proceed anyway"
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg && msg.type === "allow" && typeof msg.url === "string") {
+    allowed.add(msg.url);
+    sendResponse({ ok: true });
   }
-}
+});
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status !== "complete") return;
 
-  const url = tab.url || "";
+  const url = cleanUrl(tab.url || "");
   if (!/^https?:\/\//i.test(url)) return;
 
   void (async () => {
+    chrome.action.setBadgeText({ tabId, text: "…" });
+    chrome.action.setBadgeBackgroundColor({ tabId, color: "#6B7280" });
+
     const result = await checkUrl(url);
 
     if (!result) {
       chrome.action.setBadgeText({ tabId, text: "?" });
-      chrome.action.setBadgeBackgroundColor({
-        tabId,
-        color: "#6B7280",
-      });
+      chrome.action.setBadgeBackgroundColor({ tabId, color: "#6B7280" });
       return;
     }
 
     if (result.action === "BLOCK") {
       chrome.action.setBadgeText({ tabId, text: "!" });
-      chrome.action.setBadgeBackgroundColor({
-        tabId,
-        color: "#DC2626",
-      });
-      await injectWarning(tabId, result.flags);
+      chrome.action.setBadgeBackgroundColor({ tabId, color: "#DC2626" });
 
+      if (!allowed.has(url)) {
+        const warningPage =
+          chrome.runtime.getURL("warning.html") +
+          "?url=" + encodeURIComponent(url) +
+          "&reasons=" + encodeURIComponent(result.flags.join(" • "));
+        chrome.tabs.update(tabId, { url: warningPage });
+      }
     } else if (result.action === "ADVISORY_BADGE") {
       chrome.action.setBadgeText({ tabId, text: "?" });
-      chrome.action.setBadgeBackgroundColor({
-        tabId,
-        color: "#D97706",
-      });
-
+      chrome.action.setBadgeBackgroundColor({tabId,color: "#D97706" });
     } else {
       chrome.action.setBadgeText({ tabId, text: "✓" });
-      chrome.action.setBadgeBackgroundColor({
-        tabId,
-        color: "#16A34A",
-      });
+      chrome.action.setBadgeBackgroundColor({tabId,color: "#16A34A" });
     }
   })();
 });
