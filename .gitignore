@@ -16,3 +16,5 @@ dataset.csv
 .vscode/
 
 phishing_model_backup.pkl
+
+*.zip

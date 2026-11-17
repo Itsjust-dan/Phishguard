@@ -5,8 +5,8 @@
   "description": "Checks websites for phishing using machine learning, heuristics and VirusTotal, and warns you before you enter details.",
 
   "permissions": [
-  "tabs"
-],
+    "tabs"
+  ],
 
   "host_permissions": [
     "https://phishguard-api-a1xe.onrender.com/*"
