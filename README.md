@@ -25,7 +25,7 @@ On the warning page you can close the tab or choose to proceed anyway.
 
 ## Install
 
-**Chrome Web Store:** submitted and currently in review. The link will be added here once it is approved.
+**Chrome Web Store:** [Install PhishGuard](https://chromewebstore.google.com/detail/phishguard-phishing-detec/nckdcimpkdgnakbdgmpcabhgamgiodee?authuser=0&hl=en-GB&pli=1)
 
 **Manual install (Chrome, Brave, Edge):**
 1. Go to the [latest release](https://github.com/Itsjust-dan/Phishguard/releases/latest) and download `phishguard-extension.zip`.
