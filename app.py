@@ -11,9 +11,7 @@ from urllib.parse import urlparse
 import joblib, numpy as np, requests
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
 
 from feature_extractor import (url_features, page_features, features_to_list, registered_domain,
                                is_blocked_host, WebsiteFetchError, BlockedTargetError,
@@ -35,8 +33,19 @@ logging.basicConfig(level=logging.INFO)
 logger  = logging.getLogger("phishguard")
 app     = Flask(__name__)
 CORS(app, origins=ALLOWED_ORIGINS)
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
-limiter = Limiter(get_remote_address, app=app, storage_uri="memory://")
+
+
+# ── rate limiting ────────────────────────────────────────────────────────────
+# On Render, traffic passes through Cloudflare and Render's own proxy, so the socket address
+# is an internal 10.x proxy. Cloudflare puts the real visitor address in True-Client-IP /
+# CF-Connecting-IP. X-Forwarded-For is NOT used because a visitor can fake it.
+def client_ip():
+    h = request.headers
+    return h.get("True-Client-IP") or h.get("CF-Connecting-IP") or request.remote_addr
+
+
+limiter = Limiter(client_ip, app=app, storage_uri="memory://")
+
 session = requests.Session()
 lock    = threading.Lock()
 VT_CACHE, VT_SUBMITTED = {}, {}
@@ -235,13 +244,8 @@ def combine_risk(ml, heuristic_score, vt):
 # ── routes ───────────────────────────────────────────────────────────────────
 @app.route("/", methods=["GET"])
 def health():
-    h = request.headers
     return jsonify({"service": "PhishGuard API", "status": "running",
-                    "model_loaded": url_model is not None, "vt_enabled": bool(VT_API_KEY),
-                    "debug_ip": {"true_client_ip": h.get("True-Client-IP"),
-                                 "cf_connecting_ip": h.get("CF-Connecting-IP"),
-                                 "x_forwarded_for": h.get("X-Forwarded-For"),
-                                 "remote_addr": request.remote_addr}})
+                    "model_loaded": url_model is not None, "vt_enabled": bool(VT_API_KEY)})
 
 
 @app.route("/predict", methods=["POST"])
