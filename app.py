@@ -235,9 +235,13 @@ def combine_risk(ml, heuristic_score, vt):
 # ── routes ───────────────────────────────────────────────────────────────────
 @app.route("/", methods=["GET"])
 def health():
+    h = request.headers
     return jsonify({"service": "PhishGuard API", "status": "running",
                     "model_loaded": url_model is not None, "vt_enabled": bool(VT_API_KEY),
-                    "your_ip": get_remote_address()})
+                    "debug_ip": {"true_client_ip": h.get("True-Client-IP"),
+                                 "cf_connecting_ip": h.get("CF-Connecting-IP"),
+                                 "x_forwarded_for": h.get("X-Forwarded-For"),
+                                 "remote_addr": request.remote_addr}})
 
 
 @app.route("/predict", methods=["POST"])
