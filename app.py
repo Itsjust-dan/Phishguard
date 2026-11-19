@@ -11,6 +11,9 @@ from urllib.parse import urlparse
 import joblib, numpy as np, requests
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from werkzeug.middleware.proxy_fix import ProxyFix
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 from feature_extractor import (url_features, page_features, features_to_list, registered_domain,
                                is_blocked_host, WebsiteFetchError, BlockedTargetError,
@@ -32,6 +35,8 @@ logging.basicConfig(level=logging.INFO)
 logger  = logging.getLogger("phishguard")
 app     = Flask(__name__)
 CORS(app, origins=ALLOWED_ORIGINS)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
+limiter = Limiter(get_remote_address, app=app, storage_uri="memory://")
 session = requests.Session()
 lock    = threading.Lock()
 VT_CACHE, VT_SUBMITTED = {}, {}
@@ -231,10 +236,12 @@ def combine_risk(ml, heuristic_score, vt):
 @app.route("/", methods=["GET"])
 def health():
     return jsonify({"service": "PhishGuard API", "status": "running",
-                    "model_loaded": url_model is not None, "vt_enabled": bool(VT_API_KEY)})
+                    "model_loaded": url_model is not None, "vt_enabled": bool(VT_API_KEY),
+                    "your_ip": get_remote_address()})
 
 
 @app.route("/predict", methods=["POST"])
+@limiter.limit("120 per minute;5000 per day")
 def predict():
     try:
         data = request.get_json(silent=True)
