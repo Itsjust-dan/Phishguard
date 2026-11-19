@@ -42,3 +42,5 @@ only to perform the check.
 Questions: tolua612@gmail.com
 
 Source code: https://github.com/Itsjust-dan/Phishguard
+
+The "Support PhishGuard" link in the popup opens a GitHub Sponsors page in a new tab. Clicking it sends no data from the extension, and that page is covered by GitHub's own privacy policy.

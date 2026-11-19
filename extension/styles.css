@@ -196,3 +196,6 @@ body {
   color: #555;
   line-height: 1.6;
 }
+.support { text-align: center; padding: 10px 0 4px; font-size: 12px; }
+.support a { color: #64748b; text-decoration: none; }
+.support a:hover { text-decoration: underline; }

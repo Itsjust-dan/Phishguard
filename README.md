@@ -35,6 +35,8 @@ On the warning page you can close the tab or choose to proceed anyway.
 
 The hosted API runs on a free server, so the first check after a long quiet spell can take up to a minute.
 
+If PhishGuard helps you, you can [support it here](https://github.com/sponsors/Itsjust-dan).
+
 ## Privacy
 
 The extension sends the address of each page you visit to the PhishGuard server and, for suspicious sites, to VirusTotal. It does not read page contents, form entries, passwords or cookies. See [PRIVACY.md](PRIVACY.md) for the full policy.
