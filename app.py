@@ -39,10 +39,9 @@ CORS(app, origins=ALLOWED_ORIGINS)
 # On Render, traffic passes through Cloudflare and Render's own proxy, so the socket address
 # is an internal 10.x proxy. Cloudflare puts the real visitor address in True-Client-IP /
 # CF-Connecting-IP. X-Forwarded-For is NOT used because a visitor can fake it.
-def client_ip():
+def client_ip() -> str:
     h = request.headers
-    return h.get("True-Client-IP") or h.get("CF-Connecting-IP") or request.remote_addr
-
+    return h.get("True-Client-IP") or h.get("CF-Connecting-IP") or request.remote_addr or "unknown"
 
 limiter = Limiter(client_ip, app=app, storage_uri="memory://")
 
