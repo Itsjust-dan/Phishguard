@@ -25,7 +25,7 @@ On the warning page you can close the tab or choose to proceed anyway.
 
 ## Install
 
-**Chrome Web Store:** [Install PhishGuard](https://chromewebstore.google.com/detail/phishguard-phishing-detec/nckdcimpkdgnakbdgmpcabhgamgiodee?authuser=0&hl=en-GB&pli=1)
+**Chrome Web Store:** [Install PhishGuard](https://chromewebstore.google.com/detail/phishguard-phishing-detec/nckdcimpkdgnakbdgmpcabhgamgiodee)
 
 **Manual install (Chrome, Brave, Edge):**
 1. Go to the [latest release](https://github.com/Itsjust-dan/Phishguard/releases/latest) and download `phishguard-extension.zip`.
@@ -50,7 +50,7 @@ PhishGuard/
 ├── app.py                # Flask API (POST /predict, GET / health check)
 ├── feature_extractor.py  # URL and page feature extraction
 ├── train_model.py        # trains and saves the models
-├── download_datasets.py  # fetches the training data
+├── download_datasets.py  # fetches the extra training URLs
 ├── phishing_model.pkl    # trained models used by the API
 ├── requirements.txt
 ├── PRIVACY.md
@@ -100,12 +100,20 @@ Then load the `extension` folder with **Load unpacked** as described above.
 
 ### Retrain the model
 
+1. Download the [PhiUSIIL Phishing URL dataset](https://archive.ics.uci.edu/dataset/967/phiusiil+phishing+url+dataset) and save the CSV in the project folder as `dataset.csv`.
+2. Fetch the extra URLs (PhishTank, OpenPhish and Tranco), which creates `urls_extra.csv`:
+
 ```bash
 python download_datasets.py
-python train_model.py
 ```
 
-This rebuilds `phishing_model.pkl`. The API checks the model's feature list when it starts, so if you change `feature_extractor.py` you must retrain.
+3. Train:
+
+```bash
+python train_model.py dataset.csv urls_extra.csv
+```
+
+This prints the held-out results shown below and **overwrites** `phishing_model.pkl`. The API checks the model's feature list when it starts, so if you change `feature_extractor.py` you must retrain.
 
 ## Deployment
 
@@ -117,7 +125,26 @@ gunicorn app:app --workers 1 --threads 4 --timeout 60
 
 and the environment variable `VT_API_KEY`. By default it only accepts browser requests from extensions. To allow other origins, set `ALLOWED_ORIGINS` to a comma-separated list.
 
-<!-- Add your model results here, for example accuracy, precision, recall and the dataset sizes from your thesis. -->
+The `/predict` endpoint is rate limited to 120 requests a minute and 5,000 a day for each visitor. Behind Render and Cloudflare, the visitor is identified from the `True-Client-IP` header.
+
+## Model evaluation
+
+PhishGuard uses two calibrated Random Forest models: a **URL-only** model (used whenever the page cannot be fetched) and a **URL + page** model. Both were trained on the PhiUSIIL dataset (235,370 unique URLs after removing duplicates: 100,520 phishing and 134,850 legitimate). The URL-only model was also trained on 24,261 extra URLs (4,930 phishing) from PhishTank and OpenPhish, plus legitimate sites from the Tranco list. Some legitimate training rows were given extra subdomains (for example `auth.` or `mail.`), because almost every legitimate URL in the dataset starts with `www.`.
+
+**How it was tested:** 20% of sites were held out, split by registered domain, so no site appears in both the training and test data. Precision, recall and the "at 0.5" false alarm rate use a 0.5 threshold.
+
+| Model | AUC | Precision | Recall | False alarms at 0.5 | False alarms at 0.85 |
+|-------|-----|-----------|--------|---------------------|----------------------|
+| URL only | 0.853 | 95.6% | 63.6% | 2.2% | 0.08% |
+| URL + page | 1.000 | 99.9% | 99.5% | 0.08% | 0.03% |
+
+"False alarms" is the share of legitimate sites wrongly flagged as phishing. A stress test took 4,000 held-out legitimate sites and added a subdomain: the URL-only model flagged 4.1% of them at 0.5 and 0.4% at 0.85.
+
+**How to read these results**
+- The URL-only model misses about a third of phishing URLs at a 0.5 threshold. That is why the API also applies warning-sign rules and a VirusTotal lookup, and why pages are only blocked at high risk.
+- The near-perfect page-model score reflects the dataset, not real-world performance. In PhiUSIIL, legitimate pages are full homepages, so the model learns that small, plain pages look suspicious. The API therefore lets page evidence lower the risk a lot but raise it only a little.
+- The final verdict combines the models, the rules and VirusTotal, so no single row above is the accuracy of the whole system.
+- These figures come from re-running the training script on current data. The PhishTank, OpenPhish and Tranco lists change daily, so they will not exactly match the model file in this repository.
 
 ## Limitations
 
@@ -125,6 +152,12 @@ and the environment variable `VT_API_KEY`. By default it only accepts browser re
 - It judges addresses and page structure. It cannot catch every new or targeted phishing page, and it can occasionally flag a legitimate site.
 - Page analysis depends on the server being able to fetch the page. If it cannot, the API falls back to the address-only model.
 - Local, private-network and IP-literal addresses are deliberately not scanned.
+
+## Data and credits
+
+- Prasad, A. & Chandra, S. (2024). *PhiUSIIL Phishing URL (Website)* [Dataset]. UCI Machine Learning Repository. https://doi.org/10.1016/j.cose.2023.103545 (CC BY 4.0).
+- Phishing URL feeds from [PhishTank](https://phishtank.com) and [OpenPhish](https://openphish.com).
+- Legitimate site list from [Tranco](https://tranco-list.eu).
 
 ## Author
 

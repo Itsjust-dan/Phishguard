@@ -9,8 +9,13 @@
 __pycache__/
 *.pyc
 
-# Large data (people can fetch it with download_datasets.py)
+# Large data (dataset.csv comes from UCI, urls_extra.csv from download_datasets.py)
 dataset.csv
+urls_extra.csv
+
+# Training output and test models
+training_output.txt
+phishing_model_eval.pkl
 
 # Editor settings
 .vscode/
